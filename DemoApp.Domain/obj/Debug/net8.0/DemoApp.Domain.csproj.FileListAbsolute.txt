@@ -1,0 +1,14 @@
+D:\Projets\Azure\DemoApp\DemoApp.Domain\bin\Debug\net8.0\DemoApp.Domain.deps.json
+D:\Projets\Azure\DemoApp\DemoApp.Domain\bin\Debug\net8.0\DemoApp.Domain.dll
+D:\Projets\Azure\DemoApp\DemoApp.Domain\bin\Debug\net8.0\DemoApp.Domain.pdb
+D:\Projets\Azure\DemoApp\DemoApp.Domain\obj\Debug\net8.0\DemoApp.Domain.GeneratedMSBuildEditorConfig.editorconfig
+D:\Projets\Azure\DemoApp\DemoApp.Domain\obj\Debug\net8.0\DemoApp.Domain.AssemblyInfoInputs.cache
+D:\Projets\Azure\DemoApp\DemoApp.Domain\obj\Debug\net8.0\DemoApp.Domain.AssemblyInfo.cs
+D:\Projets\Azure\DemoApp\DemoApp.Domain\obj\Debug\net8.0\DemoApp.Domain.csproj.CoreCompileInputs.cache
+D:\Projets\Azure\DemoApp\DemoApp.Domain\obj\Debug\net8.0\DemoApp.Domain.dll
+D:\Projets\Azure\DemoApp\DemoApp.Domain\obj\Debug\net8.0\refint\DemoApp.Domain.dll
+D:\Projets\Azure\DemoApp\DemoApp.Domain\obj\Debug\net8.0\DemoApp.Domain.pdb
+D:\Projets\Azure\DemoApp\DemoApp.Domain\obj\Debug\net8.0\ref\DemoApp.Domain.dll
+D:\Projets\Azure\DemoApp\DemoApp.Functions\bin\output\DemoApp.Domain.deps.json
+D:\Projets\Azure\DemoApp\DemoApp.Functions\bin\output\DemoApp.Domain.dll
+D:\Projets\Azure\DemoApp\DemoApp.Functions\bin\output\DemoApp.Domain.pdb
