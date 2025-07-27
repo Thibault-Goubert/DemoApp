@@ -8,7 +8,9 @@ public static class ServiceCollectionExtensions
 {
     public static IServiceCollection AddInfrastructure(this IServiceCollection services)
     {
-        services.AddHttpClient<IWeatherService, WeatherService>();
+        services.AddHttpClient();
+        services.AddScoped<IWeatherService, WeatherService>();
+        services.AddScoped<IAuthService, AuthService>();
         return services;
     }
 }

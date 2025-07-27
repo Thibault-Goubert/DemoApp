@@ -4,6 +4,8 @@ using Microsoft.Extensions.Configuration;
 using System.IdentityModel.Tokens.Jwt;
 using Microsoft.IdentityModel.Tokens;
 
+namespace DemoApp.Infrastructure.Services;
+
 public class AuthService : IAuthService
 {
     private readonly IConfiguration _config;
@@ -35,5 +37,28 @@ public class AuthService : IAuthService
 
         var token = tokenHandler.CreateToken(tokenDescriptor);
         return tokenHandler.WriteToken(token);
+    }
+    public Task<string> GenerateTokenAsync(string username, string password)
+    {
+        // ⚠️ Simulation — ici on simule un login hardcodé
+        if (username != "admin" || password != "password")
+            return Task.FromResult<string>(null);
+
+        var key = _config["Jwt:Key"];
+        var issuer = _config["Jwt:Issuer"];
+
+        var claims = new[]
+        {
+            new Claim(ClaimTypes.Name, username),
+            new Claim(ClaimTypes.Role, "Admin")
+        };
+
+        var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(key));
+        var credentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);
+
+        var token = new JwtSecurityToken(issuer, issuer, claims,
+            expires: DateTime.UtcNow.AddHours(1), signingCredentials: credentials);
+
+        return Task.FromResult(new JwtSecurityTokenHandler().WriteToken(token));
     }
 }
