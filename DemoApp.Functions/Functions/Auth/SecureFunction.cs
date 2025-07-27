@@ -9,7 +9,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.Tokens;
 
-namespace DemoApp.Functions.Functions;
+namespace DemoApp.Functions.Functions.Auth;
 
 public class SecureDataFunction
 {
@@ -36,7 +36,7 @@ public class SecureDataFunction
             return req.CreateResponse(HttpStatusCode.Unauthorized);
 
         var token = authHeader["Bearer ".Length..].Trim();
-        var key = Encoding.ASCII.GetBytes(_config["Jwt:Secret"]);
+        var key = Encoding.ASCII.GetBytes(_config["Jwt:Secret"] ?? throw new InvalidOperationException("JWT Secret is not configured"));
 
         var tokenHandler = new JwtSecurityTokenHandler();
         try
