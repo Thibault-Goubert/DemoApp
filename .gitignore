@@ -4,3 +4,4 @@
 **/obj/
 
 DemoApp.Functions/local.settings.json
+DemoApp.Infrastructure/Migrations

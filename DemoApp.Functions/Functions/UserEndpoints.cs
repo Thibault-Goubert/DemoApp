@@ -2,6 +2,8 @@ using DemoApp.Domain.Entities;
 using DemoApp.Domain.Interfaces;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Http;
+using Microsoft.Data.SqlClient;
+using Microsoft.Extensions.Configuration;
 using System.Net;
 
 namespace DemoApp.Functions.Functions;
@@ -9,7 +11,12 @@ namespace DemoApp.Functions.Functions;
 public class UserEndpoints
 {
     private readonly IUserRepository _repo;
-    public UserEndpoints(IUserRepository repo) => _repo = repo;
+    private readonly IConfiguration _config;
+    public UserEndpoints(IUserRepository repo, IConfiguration config)
+    {
+        _repo = repo;
+        _config = config;
+    }
 
     [Function("CreateUser")]
     public async Task<HttpResponseData> Create(
@@ -30,5 +37,28 @@ public class UserEndpoints
         var r = req.CreateResponse(HttpStatusCode.OK);
         await r.WriteAsJsonAsync(users);
         return r;
+    }
+
+        [Function("TestConnection")]
+    public async Task<HttpResponseData> TestDbConnection(
+        [HttpTrigger(AuthorizationLevel.Anonymous, "get")] HttpRequestData req)
+    {
+        var connectionString = _config.GetConnectionString("DefaultConnection");
+        
+        try
+        {
+            using var connection = new SqlConnection(connectionString);
+            await connection.OpenAsync();
+            
+            var response = req.CreateResponse(HttpStatusCode.OK);
+            await response.WriteStringAsync("Connexion à la base de données réussie !");
+            return response;
+        }
+        catch (SqlException ex)
+        {
+            var response = req.CreateResponse(HttpStatusCode.InternalServerError);
+            await response.WriteStringAsync($"Échec de connexion : {ex.Message}");
+            return response;
+        }
     }
 }

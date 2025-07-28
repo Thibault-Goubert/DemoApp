@@ -3,24 +3,31 @@ using DemoApp.Domain.Interfaces;
 using DemoApp.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using System.Collections.Generic;
+using System.Reflection.Metadata.Ecma335;
 using System.Threading.Tasks;
 
 namespace DemoApp.Infrastructure.Repositories;
 
 public class UserRepository : IUserRepository
 {
-    private readonly AppDbContext _ctx;
-    public UserRepository(AppDbContext ctx) => _ctx = ctx;
+    private readonly IDbContextFactory<AppDbContext> _ctx;
+    public UserRepository(IDbContextFactory<AppDbContext> ctx) => _ctx = ctx;
 
     public async Task AddAsync(User user)
     {
-        _ctx.Users.Add(user);
-        await _ctx.SaveChangesAsync();
+        await using var db = await _ctx.CreateDbContextAsync();
+        db.Users.Add(user);
+        await db.SaveChangesAsync();
     }
 
-    public Task<User?> GetByUsernameAsync(string username) =>
-        _ctx.Users.FirstOrDefaultAsync(u => u.Username == username);
+    public async Task<User?> GetByUsernameAsync(string username)
+    {
+        await using var db = await _ctx.CreateDbContextAsync();
+        return await db.Users.FirstOrDefaultAsync(u => u.Username == username);
+    }
 
-    public Task<IEnumerable<User>> GetAllAsync() =>
-        _ctx.Users.ToListAsync().ContinueWith(t => (IEnumerable<User>)t.Result);
+    public async Task<IEnumerable<User>> GetAllAsync(){ 
+        await using var db = await _ctx.CreateDbContextAsync();
+        return await db.Users.ToListAsync().ContinueWith(t => (IEnumerable<User>)t.Result);
+    } 
 }
