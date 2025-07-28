@@ -71,7 +71,7 @@ public class LoginFunction
             }
 
             // 6. Authentification
-            string token = await _authService.GenerateTokenAsync(data?.Username ?? string.Empty, data?.Password ?? string.Empty);
+            string token = await _authService.GenerateTokenAsync(data.Username!, data.Password!);
 
             // 7. Réponse
             var response = req.CreateResponse(token != null ? HttpStatusCode.OK : HttpStatusCode.Unauthorized);
@@ -79,7 +79,8 @@ public class LoginFunction
             {
                 await response.WriteAsJsonAsync(new { 
                     token,
-                    expiresIn = 3600 // À adapter selon votre configuration
+                    expiresIn = 3600,
+                    tokenType = "Bearer"
                 });
             }
 

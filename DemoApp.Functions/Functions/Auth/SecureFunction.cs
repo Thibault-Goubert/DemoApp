@@ -2,6 +2,7 @@
 
 using System.IdentityModel.Tokens.Jwt;
 using System.Net;
+using System.Security.Claims;
 using System.Text;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Http;
@@ -45,21 +46,26 @@ public class SecureDataFunction
             {
                 ValidateIssuerSigningKey = true,
                 IssuerSigningKey = new SymmetricSecurityKey(key),
-                ValidateIssuer = false,
-                ValidateAudience = false,
+                ValidateIssuer = true,
+                ValidIssuer = _config["Jwt:Issuer"],
+                ValidateAudience = true,
+                ValidAudience = _config["Jwt:Audience"],
                 ClockSkew = TimeSpan.Zero
             }, out SecurityToken validatedToken);
 
+            var jwt = (JwtSecurityToken)validatedToken;
+            var username = jwt.Claims.First(c => c.Type == ClaimTypes.Name).Value;
+
             var response = req.CreateResponse(HttpStatusCode.OK);
-            await response.WriteStringAsync("Tu es bien authentifié ✅");
+            await response.WriteStringAsync($"Bonjour {username}, tu es bien authentifié ✅");
 
             _logger.LogInformation("Token valid, returning success");
 
             return response;
         }
-        catch
+       catch (SecurityTokenException ex)
         {
-            _logger.LogInformation("Unauthorized");
+            _logger.LogWarning($"Token validation failed: {ex.Message}");
             return req.CreateResponse(HttpStatusCode.Unauthorized);
         }
     }

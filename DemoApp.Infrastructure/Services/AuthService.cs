@@ -20,15 +20,20 @@ public class AuthService : IAuthService
 
     public Task<string> GenerateTokenAsync(string username, string password)
     {
-        // ⚠️ Simulation — ici on simule un login hardcodé
-        if (username != "admin" || password != "pass")
+       // Solution : comparaison insensible à la casse
+        if (!string.Equals(username, "admin", StringComparison.OrdinalIgnoreCase) || 
+            !string.Equals(password, "pass", StringComparison.Ordinal))
+        {
+            _logger.LogWarning($"Invalid login attempt for user: {username}");
             return Task.FromResult(string.Empty);
-
+        }
         var key = _config["Jwt:Secret"];
         var issuer = _config["Jwt:Issuer"];
 
         var claims = new[]
         {
+            new Claim(JwtRegisteredClaimNames.Sub, username), // ID sujet
+            new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()), // ID unique du token
             new Claim(ClaimTypes.Name, username),
             new Claim(ClaimTypes.Role, "Admin")
         };
