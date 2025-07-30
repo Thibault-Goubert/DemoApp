@@ -39,7 +39,7 @@ public class UserEndpoints
         return r;
     }
 
-        [Function("TestConnection")]
+    [Function("TestConnection")]
     public async Task<HttpResponseData> TestDbConnection(
         [HttpTrigger(AuthorizationLevel.Anonymous, "get")] HttpRequestData req)
     {

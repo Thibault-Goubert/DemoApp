@@ -3,6 +3,7 @@ using DemoApp.Domain.Interfaces;
 using DemoApp.Infrastructure;
 using DemoApp.Infrastructure.Data;
 using DemoApp.Infrastructure.Repositories;
+using DemoApp.Infrastructure.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -26,6 +27,7 @@ var host = new HostBuilder()
             logging.AddDebug();
         });
         services.AddScoped<IUserRepository, UserRepository>();
+        services.AddSingleton<PasswordService>();  
     })
     .Build();
 

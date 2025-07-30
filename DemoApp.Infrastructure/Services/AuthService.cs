@@ -4,6 +4,7 @@ using Microsoft.Extensions.Configuration;
 using System.IdentityModel.Tokens.Jwt;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.Extensions.Logging;
+using DemoApp.Domain.Interfaces;
 
 namespace DemoApp.Infrastructure.Services;
 
@@ -11,22 +12,26 @@ public class AuthService : IAuthService
 {
     private readonly IConfiguration _config;
     private readonly ILogger _logger;
+    private readonly PasswordService _passwordService;
+    private readonly IUserRepository _repo;
 
-    public AuthService(IConfiguration config, ILoggerFactory loggerFactory)
+    public AuthService(IUserRepository repo, PasswordService passwordService, IConfiguration config, ILoggerFactory loggerFactory)
     {
+        _repo = repo;
+        _passwordService = passwordService;
         _config = config;
         _logger = loggerFactory.CreateLogger<AuthService>();
     }
 
-    public Task<string> GenerateTokenAsync(string username, string password)
+    public async Task<string> GenerateTokenAsync(string username, string password)
     {
-       // Solution : comparaison insensible à la casse
-        if (!string.Equals(username, "admin", StringComparison.OrdinalIgnoreCase) || 
-            !string.Equals(password, "pass", StringComparison.Ordinal))
+        var user = await _repo.GetByUsernameAsync(username);
+        if (user is null || !_passwordService.VerifyPassword(username, password, user.PasswordHash))
         {
-            _logger.LogWarning($"Invalid login attempt for user: {username}");
-            return Task.FromResult(string.Empty);
+            _logger.LogWarning($"Invalid login attempt for {username}");
+            return string.Empty;
         }
+
         var key = _config["Jwt:Secret"];
         var issuer = _config["Jwt:Issuer"];
 
@@ -44,6 +49,6 @@ public class AuthService : IAuthService
         var token = new JwtSecurityToken(issuer, issuer, claims,
             expires: DateTime.UtcNow.AddHours(1), signingCredentials: credentials);
 
-        return Task.FromResult(new JwtSecurityTokenHandler().WriteToken(token));
+        return await Task.FromResult(new JwtSecurityTokenHandler().WriteToken(token));
     }
 }
