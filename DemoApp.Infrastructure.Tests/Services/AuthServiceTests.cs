@@ -1,9 +1,13 @@
+using System.Text;
+using AutoMapper;
+using DemoApp.Application.DTO;
+using DemoApp.Application.Services;
+using DemoApp.Domain.Entities;
+using DemoApp.Domain.Interfaces.Repositories;
 using DemoApp.Infrastructure.Services;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Moq;
-using System.Collections.Generic;
-using Xunit;
 
 namespace DemoApp.Infrastructure.Tests.Services;
 
@@ -11,6 +15,10 @@ public class AuthServiceTests
 {
     private readonly Mock<IConfiguration> _mockConfig = new();
     private readonly Mock<ILoggerFactory> _mockLoggerFactory = new();
+    private readonly Mock<IPasswordHasher> _mockPasswordHasher = new();
+    private readonly Mock<IUserRepository> _mockUserRepository = new();
+    private readonly Mock<IUserService> _mockUserService = new();
+    private readonly Mock<IMapper> _mockMapper = new();
     private readonly AuthService _authService;
 
     public AuthServiceTests()
@@ -23,13 +31,25 @@ public class AuthServiceTests
             ["Jwt:Audience"] = "test_audience"
         };
 
+        _mockMapper.Setup(m => m.Map<UserDto>(It.IsAny<User>()))
+            .Returns((User user) => new UserDto(user.Id, user.Username, user.Role.ToString()));
+
         _mockConfig.Setup(c => c[It.IsAny<string>()])
             .Returns<string>(key => configValues.TryGetValue(key, out var value) ? value : null);
 
         _mockLoggerFactory.Setup(f => f.CreateLogger(It.IsAny<string>()))
             .Returns(Mock.Of<ILogger>());
 
-        _authService = new AuthService(_mockConfig.Object, _mockLoggerFactory.Object);
+        _mockPasswordHasher.Setup(p => p.Hash(It.IsAny<string>()))
+            .Returns((string password) => Convert.ToBase64String(Encoding.UTF8.GetBytes(password)));
+
+        _mockUserService.Setup(s => s.GetUserAsync(It.IsAny<string>()))
+            .ReturnsAsync(_mockMapper.Object.Map<UserDto>(new User(It.IsAny<string>(), Convert.ToBase64String(Encoding.UTF8.GetBytes("pass")))));
+        
+        _mockUserRepository.Setup(r => r.GetByUsernameAsync(It.IsAny<string>()))
+            .ReturnsAsync((string username) => username == "admin" ? new User(username, Convert.ToBase64String(Encoding.UTF8.GetBytes("pass"))) : null);
+
+        _authService = new AuthService(_mockPasswordHasher.Object, _mockConfig.Object, _mockLoggerFactory.Object,  _mockUserService.Object, _mockUserRepository.Object);
     }
 
     [Fact]
@@ -69,7 +89,7 @@ public class AuthServiceTests
     {
         // Arrange - Configuration manquante
         var emptyConfig = new Mock<IConfiguration>();
-        var invalidAuthService = new AuthService(emptyConfig.Object, _mockLoggerFactory.Object);
+        var invalidAuthService = new AuthService(_mockPasswordHasher.Object, _mockConfig.Object, _mockLoggerFactory.Object, _mockUserService.Object, _mockUserRepository.Object);
 
         // Act & Assert
         await Assert.ThrowsAsync<InvalidOperationException>(

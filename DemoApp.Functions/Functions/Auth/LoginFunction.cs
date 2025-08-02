@@ -1,4 +1,5 @@
-using DemoApp.Domain.Interfaces;
+using DemoApp.Application.DTO;
+using DemoApp.Application.Services;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Http;
 using Microsoft.Extensions.Logging;
@@ -44,7 +45,7 @@ public class LoginFunction
             }
 
             // 3. Journaliser le corps pour le débogage (à désactiver en production)
-            _logger.LogInformation($"Received body: {rawBody}");
+            // _logger.LogInformation($"Received body: {rawBody}");
 
             // 4. Désérialiser avec gestion d'erreur détaillée
             LoginRequest? data;
@@ -63,10 +64,10 @@ public class LoginFunction
             }
 
             // 5. Validation des données
-            if (data == null || string.IsNullOrEmpty(data.Username))
+            if (data == null || string.IsNullOrEmpty(data.Username) || string.IsNullOrEmpty(data.Password))
             {
                 var validationResponse = req.CreateResponse(HttpStatusCode.BadRequest);
-                await validationResponse.WriteStringAsync("Username is required");
+                await validationResponse.WriteStringAsync("Username and password are required");
                 return validationResponse;
             }
 
@@ -77,7 +78,9 @@ public class LoginFunction
             var response = req.CreateResponse(token != null ? HttpStatusCode.OK : HttpStatusCode.Unauthorized);
             if (token != null)
             {
-                await response.WriteAsJsonAsync(new { 
+                
+                await response.WriteAsJsonAsync(new
+                {
                     token,
                     expiresIn = 3600,
                     tokenType = "Bearer"
@@ -94,10 +97,4 @@ public class LoginFunction
             return errorResponse;
         }
     }
-}
-
-public class LoginRequest
-{
-    public string? Username { get; set; }
-    public string? Password { get; set; }
 }

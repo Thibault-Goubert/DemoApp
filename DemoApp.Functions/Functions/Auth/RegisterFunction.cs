@@ -1,52 +1,44 @@
-using DemoApp.Domain.Entities;
-using DemoApp.Domain.Interfaces;
-using DemoApp.Infrastructure.Services;
+using DemoApp.Application.DTO;
+using DemoApp.Application.Services;
+using DemoApp.Domain.Interfaces.Repositories;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Http;
+using Microsoft.Extensions.Logging;
 using System.Net;
+using System.Text.Json;
 
 namespace DemoApp.Functions.Functions.Auth;
 
 public class RegisterFunction
 {
-    private readonly IUserRepository _repo;
-    private readonly PasswordService _passwordService;
+    private readonly IUserService _userService;
+    private readonly ILogger _logger;
+    private readonly IAuthService _authService;
 
-    public RegisterFunction(IUserRepository repo, PasswordService passwordService)
+    public RegisterFunction(ILoggerFactory loggerFactory, IUserService userService, IAuthService authService)
     {
-        _repo = repo;
-        _passwordService = passwordService;
+        _logger = loggerFactory.CreateLogger<RegisterFunction>();
+        _userService = userService;
+        _authService = authService;
     }
 
     [Function("Register")]
     public async Task<HttpResponseData> Run(
         [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "register")] HttpRequestData req)
     {
-        var data = await req.ReadFromJsonAsync<UserRegisterRequest>();
-        if (data is null || string.IsNullOrWhiteSpace(data.Username) || string.IsNullOrWhiteSpace(data.Password))
+        var body = await new StreamReader(req.Body).ReadToEndAsync();
+        var data = JsonSerializer.Deserialize<LoginRequest>(body, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+        if (data == null || string.IsNullOrEmpty(data.Username) || string.IsNullOrEmpty(data.Password))
             return req.CreateResponse(HttpStatusCode.BadRequest);
 
-        // Vérifier si user existe déjà
-        var existing = await _repo.GetByUsernameAsync(data.Username);
-        if (existing != null)
-        {
-            var conflict = req.CreateResponse(HttpStatusCode.Conflict);
-            await conflict.WriteStringAsync("Username already exists");
-            return conflict;
-        }
+        if (await _userService.CheckUserExistsAsync(data.Username))
+            return req.CreateResponse(HttpStatusCode.Conflict);
 
-        var user = new User
-        {
-            Username = data.Username,
-            PasswordHash = _passwordService.HashPassword(data.Username, data.Password)
-        };
-
-        await _repo.AddAsync(user);
+        await _authService.RegisterAsync(data.Username, data.Password);
 
         var response = req.CreateResponse(HttpStatusCode.Created);
-        await response.WriteStringAsync("User created");
+        await response.WriteStringAsync("User registered successfully");
         return response;
     }
 }
-
-public record UserRegisterRequest(string Username, string Password);

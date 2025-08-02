@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace DemoApp.Infrastructure;
+namespace DemoApp.Infrastructure.Extensions;
 
 public static class ServiceCollectionExtensions
 {
@@ -14,13 +14,16 @@ public static class ServiceCollectionExtensions
         var connectionString = configuration.GetConnectionString("DefaultConnection");
         
         services.AddHttpClient();
-        services.AddScoped<IWeatherService, WeatherService>();
+        
+        services.AddScoped<IUserService, UserService>();
         services.AddScoped<IAuthService, AuthService>();
+        services.AddSingleton<IPasswordHasher, PasswordHasher>();   
 
         services.AddDbContextFactory<AppDbContext>(options =>
         {
             options.UseSqlServer(connectionString);
         });
+        
         return services;
     }
 }

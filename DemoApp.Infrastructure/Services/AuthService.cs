@@ -4,7 +4,9 @@ using Microsoft.Extensions.Configuration;
 using System.IdentityModel.Tokens.Jwt;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.Extensions.Logging;
-using DemoApp.Domain.Interfaces;
+using DemoApp.Application.Services;
+using DemoApp.Domain.Interfaces.Repositories;
+using DemoApp.Domain.Entities;
 
 namespace DemoApp.Infrastructure.Services;
 
@@ -12,22 +14,45 @@ public class AuthService : IAuthService
 {
     private readonly IConfiguration _config;
     private readonly ILogger _logger;
-    private readonly PasswordService _passwordService;
-    private readonly IUserRepository _repo;
+    private readonly IUserRepository _userRepository;
+    private readonly IPasswordHasher _passwordHasher;
 
-    public AuthService(IUserRepository repo, PasswordService passwordService, IConfiguration config, ILoggerFactory loggerFactory)
+    public AuthService(IPasswordHasher passwordHasher, IConfiguration config, ILoggerFactory loggerFactory, IUserService userService, IUserRepository userRepository)
     {
-        _repo = repo;
-        _passwordService = passwordService;
+        _passwordHasher = passwordHasher;
         _config = config;
         _logger = loggerFactory.CreateLogger<AuthService>();
+        _userRepository = userRepository;
+    }
+
+    public async Task<bool> RegisterAsync(string username, string password)
+    {
+        if (await _userRepository.GetByUsernameAsync(username) != null)
+        {
+            _logger.LogWarning("Tentative d'enregistrement avec un nom d'utilisateur déjà pris : {Username}", username);
+            return false;
+        }
+
+        await _userRepository.AddAsync(new User(username, _passwordHasher.Hash(password)));
+        return true;
+    }
+
+    public async Task<bool> ValidateUserAsync(string username, string password)
+    {
+        var user = await _userRepository.GetByUsernameAsync(username);
+        if (user == null)
+        { 
+            return false;
+        }
+        
+        return _passwordHasher.Verify(password, user.PasswordHash);
     }
 
     public async Task<string> GenerateTokenAsync(string username, string password)
     {
-        var user = await _repo.GetByUsernameAsync(username);
-        if (user is null || !_passwordService.VerifyPassword(username, password, user.PasswordHash))
-        {
+        var user = await _userRepository.GetByUsernameAsync(username);
+        if (user == null || !_passwordHasher.Verify(password, user.PasswordHash))
+        { 
             _logger.LogWarning($"Invalid login attempt for {username}");
             return string.Empty;
         }
@@ -37,10 +62,10 @@ public class AuthService : IAuthService
 
         var claims = new[]
         {
-            new Claim(JwtRegisteredClaimNames.Sub, username), // ID sujet
-            new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()), // ID unique du token
-            new Claim(ClaimTypes.Name, username),
-            new Claim(ClaimTypes.Role, "Admin")
+            new Claim(ClaimTypes.Name, user.Username),
+            new Claim(ClaimTypes.Role, user.Role),
+            new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
+            new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
         };
 
         var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(key ?? throw new InvalidOperationException("JWT Secret is not configured")));
